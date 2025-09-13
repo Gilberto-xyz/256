@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuegos Artificiales - Feliz 2^8</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        .info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 14px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">Haz clic para lanzar fuegos artificiales</div>
+    <script>
+        let fuegos = [];
+        let estrellas = [];
+        let mensajeAlpha = 0;
+        let mensajeDireccion = 1;
+        
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            colorMode(HSB);
+            
+            // Crear estrellas de fondo
+            for (let i = 0; i < 150; i++) {
+                estrellas.push({
+                    x: random(width),
+                    y: random(height),
+                    size: random(0.5, 2),
+                    brillo: random(50, 100)
+                });
+            }
+            
+            // Lanzar fuegos artificiales iniciales
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    lanzarFuegoArtificial();
+                }, i * 800);
+            }
+        }
+        
+        function draw() {
+            // Fondo oscuro con rastro
+            background(0, 0, 0, 0.15);
+            
+            // Dibujar estrellas
+            dibujarEstrellas();
+            
+            // Actualizar y dibujar fuegos artificiales
+            for (let i = fuegos.length - 1; i >= 0; i--) {
+                fuegos[i].actualizar();
+                fuegos[i].mostrar();
+                
+                if (fuegos[i].terminado()) {
+                    fuegos.splice(i, 1);
+                }
+            }
+            
+            // Mostrar mensaje
+            mostrarMensaje();
+            
+            // Lanzar fuegos artificiales aleatorios
+            if (random() < 0.015) {
+                lanzarFuegoArtificial();
+            }
+        }
+        
+        function dibujarEstrellas() {
+            push();
+            colorMode(RGB);
+            for (let estrella of estrellas) {
+                fill(255, 255, 255, estrella.brillo);
+                noStroke();
+                ellipse(estrella.x, estrella.y, estrella.size, estrella.size);
+            }
+            pop();
+        }
+        
+        function lanzarFuegoArtificial(x, y) {
+            let tipo = random(['normal', 'corazon', 'estrella']);
+            let fx = x || random(width * 0.2, width * 0.8);
+            let fy = y || random(height * 0.3, height * 0.7);
+            fuegos.push(new FuegoArtificial(fx, fy, tipo));
+        }
+        
+        function mousePressed() {
+            // Lanzar fuego artificial al hacer clic
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    lanzarFuegoArtificial(
+                        mouseX + random(-50, 50), 
+                        mouseY + random(-30, 30)
+                    );
+                }, i * 200);
+            }
+        }
+        
+        function keyPressed() {
+            // Lanzar fuegos artificiales con teclas
+            if (key === ' ') {
+                for (let i = 0; i < 8; i++) {
+                    setTimeout(() => {
+                        lanzarFuegoArtificial();
+                    }, i * 300);
+                }
+            }
+        }
+        
+        function mostrarMensaje() {
+            push();
+            colorMode(RGB);
+            
+            // Animar la transparencia del mensaje
+            mensajeAlpha += mensajeDireccion * 2;
+            if (mensajeAlpha > 255 || mensajeAlpha < 100) {
+                mensajeDireccion *= -1;
+            }
+            mensajeAlpha = constrain(mensajeAlpha, 100, 255);
+            
+            // Fuente grande y brillante
+            textAlign(CENTER, CENTER);
+            textSize(min(width, height) * 0.08);
+            
+            // Crear efecto de brillo con sombras múltiples
+            for (let i = 3; i > 0; i--) {
+                fill(255, 255, 100, mensajeAlpha / (i * 2));
+                textSize(min(width, height) * 0.08 + i * 2);
+                text("Feliz 2⁸ = 256", width/2, height/2);
+            }
+            
+            // Texto principal
+            fill(255, 255, 255, mensajeAlpha);
+            textSize(min(width, height) * 0.08);
+            text("Feliz 2⁸ = 256", width/2, height/2);
+            
+            // Subtítulo con animación
+            textSize(min(width, height) * 0.025);
+            fill(255, 200, 100, mensajeAlpha * 0.8);
+            text("Dia del Programador!", width/2, height/2 + 60);
+            
+            pop();
+        }
+        
+        class FuegoArtificial {
+            constructor(x, y, tipo = 'normal') {
+                this.pos = createVector(x, height);
+                this.vel = createVector(random(-1, 1), random(-12, -8));
+                this.acc = createVector(0, 0.1);
+                this.tipo = tipo;
+                this.explotado = false;
+                this.particulas = [];
+                this.color = random(360);
+                this.tamaño = random(2, 4);
+            }
+            
+            actualizar() {
+                if (!this.explotado) {
+                    this.vel.add(this.acc);
+                    this.pos.add(this.vel);
+                    
+                    if (this.vel.y >= 0) {
+                        this.explotar();
+                    }
+                }
+                
+                for (let i = this.particulas.length - 1; i >= 0; i--) {
+                    this.particulas[i].actualizar();
+                    if (this.particulas[i].vida <= 0) {
+                        this.particulas.splice(i, 1);
+                    }
+                }
+            }
+            
+            explotar() {
+                this.explotado = true;
+                let cantidad = this.tipo === 'corazon' ? 80 : this.tipo === 'estrella' ? 100 : 150;
+                
+                for (let i = 0; i < cantidad; i++) {
+                    let angulo = (TWO_PI / cantidad) * i;
+                    let velocidad = random(2, 8);
+                    
+                    if (this.tipo === 'corazon') {
+                        // Crear forma de corazón con partículas
+                        let t = map(i, 0, cantidad, 0, TWO_PI);
+                        let x = 16 * pow(sin(t), 3);
+                        let y = -(13 * cos(t) - 5 * cos(2*t) - 2 * cos(3*t) - cos(4*t));
+                        let v = createVector(x * 0.8, y * 0.8);
+                        v.mult(0.3);
+                        this.particulas.push(new Particula(this.pos.x, this.pos.y, v.x, v.y, this.color, true));
+                    } else if (this.tipo === 'estrella') {
+                        // Crear estrella con patrón
+                        let radio = (i % 2 === 0) ? 1 : 0.5;
+                        let vx = cos(angulo) * velocidad * radio;
+                        let vy = sin(angulo) * velocidad * radio;
+                        this.particulas.push(new Particula(this.pos.x, this.pos.y, vx, vy, this.color + i * 2, true));
+                    } else {
+                        // Explosión normal con variación de colores
+                        let vx = cos(angulo) * velocidad;
+                        let vy = sin(angulo) * velocidad;
+                        let colorParticula = this.color + random(-30, 30);
+                        this.particulas.push(new Particula(this.pos.x, this.pos.y, vx, vy, colorParticula, false));
+                    }
+                }
+                
+                // Agregar partículas adicionales para hacer el efecto más espectacular
+                for (let i = 0; i < 30; i++) {
+                    let vx = random(-5, 5);
+                    let vy = random(-5, 5);
+                    this.particulas.push(new Particula(this.pos.x, this.pos.y, vx, vy, this.color + 180, false));
+                }
+            }
+            
+            mostrar() {
+                if (!this.explotado) {
+                    push();
+                    colorMode(RGB);
+                    stroke(255, 200, 100);
+                    strokeWeight(this.tamaño);
+                    point(this.pos.x, this.pos.y);
+                    
+                    // Brillar
+                    fill(255, 200, 0, 100);
+                    noStroke();
+                    ellipse(this.pos.x, this.pos.y, this.tamaño * 3, this.tamaño * 3);
+                    pop();
+                }
+                
+                for (let particula of this.particulas) {
+                    particula.mostrar();
+                }
+            }
+            
+            terminado() {
+                return this.explotado && this.particulas.length === 0;
+            }
+        }
+        
+        class Particula {
+            constructor(x, y, vx, vy, color, brillante) {
+                this.pos = createVector(x, y);
+                this.vel = createVector(vx, vy);
+                this.acc = createVector(0, 0.15);
+                this.vida = 255;
+                this.maxVida = 255;
+                this.color = color;
+                this.brillante = brillante;
+                this.tamaño = random(1, 4);
+                this.resistencia = random(0.98, 0.99);
+            }
+            
+            actualizar() {
+                this.vel.mult(this.resistencia);
+                this.vel.add(this.acc);
+                this.pos.add(this.vel);
+                this.vida -= random(1, 3);
+                this.tamaño *= 0.985;
+            }
+            
+            mostrar() {
+                push();
+                colorMode(HSB);
+                let alpha = map(this.vida, 0, this.maxVida, 0, 255);
+                
+                if (this.brillante) {
+                    // Crear efecto de brillo con múltiples capas
+                    for (let i = 3; i > 0; i--) {
+                        fill(this.color, 100, 100, alpha / (i * 2));
+                        noStroke();
+                        ellipse(this.pos.x, this.pos.y, this.tamaño * (i + 1), this.tamaño * (i + 1));
+                    }
+                }
+                
+                // Partícula principal
+                fill(this.color, 80, 100, alpha);
+                noStroke();
+                ellipse(this.pos.x, this.pos.y, this.tamaño, this.tamaño);
+                
+                // Crear estela luminosa
+                if (this.vel.mag() > 2) {
+                    stroke(this.color, 60, 100, alpha * 0.5);
+                    strokeWeight(1);
+                    line(this.pos.x, this.pos.y, 
+                         this.pos.x - this.vel.x * 3, 
+                         this.pos.y - this.vel.y * 3);
+                }
+                
+                pop();
+            }
+        }
+        
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+            // Recrear estrellas para el nuevo tamaño
+            estrellas = [];
+            for (let i = 0; i < 150; i++) {
+                estrellas.push({
+                    x: random(width),
+                    y: random(height),
+                    size: random(0.5, 2),
+                    brillo: random(50, 100)
+                });
+            }
+        }
+    </script>
+</body>
+</html>
